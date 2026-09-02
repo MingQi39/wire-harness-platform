@@ -1,7 +1,33 @@
 # 线束管理平台 ECS 部署（与 LIMS 同机时：数据目录 /data/wire-harness，勿与 /data/lims 混用）
-# 对外由主机 Nginx/Caddy 反代到 WEB_HOST_PORT（默认 8096），见 deploy/nginx-host.wire.houmq.cn.example
+#
+# 入口 HTTPS（推荐，与 LIMS 同机）：
+#   WIRE_HARNESS_EDGE_MODE=shared-caddy → scripts/register-wire-shared-caddy.sh 注册到主 LIMS Caddy
+# 备选：
+#   standalone-caddy → 本 compose 内 caddy 服务占 80/443
+#   host-nginx → WEB_HOST_PORT=8096 + deploy/nginx-host.wire.houmq.cn.example
 
 services:
+  caddy:
+    profiles: ["standalone-caddy"]
+    image: caddy:2-alpine
+    env_file:
+      - ../.env
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?请在 .env 中设置 SITE_ADDRESS}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile.ecs:/etc/caddy/Caddyfile:ro
+      - /data/wire-harness/caddy/data:/data
+      - /data/wire-harness/caddy/config:/config
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      web:
+        condition: service_started
+    restart: unless-stopped
+
   postgres:
     image: postgres:15-alpine
     environment:
@@ -72,9 +98,19 @@ services:
 
   web:
     image: ${WIRE_HARNESS_WEB_IMAGE:-wire-harness-web:ecs}
+    container_name: wire-harness-web
+    expose:
+      - "80"
     ports:
-      - "${WEB_HOST_PORT:-8096}:80"
+      - "${WEB_HOST_PORT:-127.0.0.1:8096:80}"
     depends_on:
       backend:
         condition: service_healthy
+    networks:
+      - default
+      - lims-edge
     restart: unless-stopped
+
+networks:
+  lims-edge:
+    external: true

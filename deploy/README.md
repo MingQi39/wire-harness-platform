@@ -14,7 +14,8 @@
 | `/data/wire-harness/uploads` | 附件 |
 | `/data/wire-harness/backups` | 备份（预留） |
 
-容器对外端口：**8096**（主机 Nginx 反代到 `wire.houmq.cn`）。
+HTTPS 由**主 LIMS Caddy** 自动签发证书（`scripts/register-wire-shared-caddy.sh` 注册 `wire.houmq.cn`）。  
+本机调试：`http://127.0.0.1:8096`（不对外暴露明文 HTTP）。
 
 ## GitHub Actions
 

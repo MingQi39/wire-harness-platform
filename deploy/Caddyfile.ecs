@@ -1,0 +1,22 @@
+# 独立 Caddy 模式（WIRE_HARNESS_EDGE_MODE=standalone-caddy）使用。
+# 共享主 LIMS Caddy 时由 scripts/register-wire-shared-caddy.sh 写入主 Caddyfile。
+
+{$SITE_ADDRESS} {
+	encode gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	handle {
+		reverse_proxy web:80 {
+			health_uri /ready
+			health_interval 5s
+			health_timeout 3s
+		}
+	}
+}

@@ -14,8 +14,10 @@ if [[ "$(id -u)" -ne 0 ]]; then
 fi
 
 mkdir -p "$DEPLOY_DIR"
-mkdir -p "$DATA_ROOT"/{postgres,redis,uploads,backups}
+mkdir -p "$DATA_ROOT"/{postgres,redis,uploads,backups,caddy/{data,config}}
 chown -R "$RUN_USER:$RUN_USER" "$DEPLOY_DIR" "$DATA_ROOT"
+
+docker network inspect lims-edge >/dev/null 2>&1 || docker network create lims-edge
 
 if [[ ! -f "$ENV_FILE" ]]; then
   if [[ -f "$DEPLOY_DIR/deploy/.env.ecs.example" ]]; then
@@ -34,6 +36,7 @@ fi
 echo "部署目录: $DEPLOY_DIR"
 echo "数据目录: $DATA_ROOT （独立于 LIMS /data/lims）"
 echo "下一步："
-echo "  1. 编辑 $ENV_FILE"
-echo "  2. 配置主机 Nginx：deploy/nginx-host.wire.houmq.cn.example"
-echo "  3. cd $DEPLOY_DIR && docker compose -f $COMPOSE_FILE --env-file $ENV_FILE -p wire-harness-prod up -d"
+echo "  1. 编辑 $ENV_FILE（确认 SITE_ADDRESS=wire.houmq.cn、WIRE_HARNESS_EDGE_MODE=shared-caddy）"
+echo "  2. cd $DEPLOY_DIR && docker compose -f $COMPOSE_FILE --env-file $ENV_FILE -p wire-harness-prod up -d"
+echo "  3. 注册 HTTPS：sudo bash $DEPLOY_DIR/scripts/register-wire-shared-caddy.sh"
+echo "     （将 wire.houmq.cn 写入主 LIMS Caddy，与 cnas 同机模式）"

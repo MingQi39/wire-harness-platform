@@ -33,9 +33,11 @@
 sudo mkdir -p /opt/wire-harness-deploy
 # 将 deploy/ scripts/ 同步到 /opt/wire-harness-deploy 后：
 sudo bash /opt/wire-harness-deploy/scripts/bootstrap-ecs.sh
-vim /opt/wire-harness-deploy/.env   # 填入密钥
-# 配置主机 Nginx（见 deploy/nginx-host.wire.houmq.cn.example）
-sudo nginx -t && sudo systemctl reload nginx
+vim /opt/wire-harness-deploy/.env   # 填入密钥，确认 WIRE_HARNESS_EDGE_MODE=shared-caddy
+docker network create lims-edge 2>/dev/null || true
+docker compose -f /opt/wire-harness-deploy/deploy/docker-compose.ecs.yml \
+  --env-file /opt/wire-harness-deploy/.env -p wire-harness-prod up -d
+sudo bash /opt/wire-harness-deploy/scripts/register-wire-shared-caddy.sh
 ```
 
 ## 数据隔离（重要）
