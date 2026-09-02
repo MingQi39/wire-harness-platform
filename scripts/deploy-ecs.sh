@@ -32,11 +32,25 @@ retag_if_set() {
 retag_if_set "${RETAG_BACKEND:-}" "$RUNTIME_BACKEND_TAG"
 retag_if_set "${RETAG_WEB:-}" "$RUNTIME_WEB_TAG"
 
+ensure_caddy_ports() {
+  local port pid
+  for port in 80 443; do
+    if ss -tlnp 2>/dev/null | grep -q ":${port} "; then
+      if systemctl is-active --quiet nginx 2>/dev/null; then
+        echo "Port ${port} occupied by nginx; stopping nginx so Caddy can bind 80/443..."
+        sudo systemctl stop nginx || true
+      fi
+    fi
+  done
+}
+
 docker network inspect lims-edge >/dev/null 2>&1 || docker network create lims-edge
 
 cd "$DEPLOY_DIR"
 compose_args=(-f "$COMPOSE_FILE" --env-file "$ENV_FILE" -p "$PROJECT_NAME")
 if [[ "$EDGE_MODE" == "standalone-caddy" ]]; then
+  mkdir -p /data/wire-harness/caddy/{data,config}
+  ensure_caddy_ports
   docker compose "${compose_args[@]}" --profile standalone-caddy up -d --remove-orphans
 else
   docker compose "${compose_args[@]}" up -d --remove-orphans
