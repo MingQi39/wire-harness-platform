@@ -1,10 +1,11 @@
 # 线束管理平台 ECS 部署（wire.houmq.cn）
-# 参考 lims-electron deploy-full.yml：同机 SSH 传镜像，数据目录 /data/wire-harness 独立。
+# 镜像优先 push 到 GHCR，ECS 直接 docker pull（避免 GitHub US runner → 国内 SCP 过慢）。
 
 name: Deploy Wire Harness Platform
 
 permissions:
   contents: read
+  packages: write
 
 on:
   workflow_dispatch:
@@ -30,7 +31,7 @@ jobs:
     environment: production
     concurrency:
       group: wire-harness-deploy
-      cancel-in-progress: false
+      cancel-in-progress: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -39,6 +40,7 @@ jobs:
         run: |
           set -euo pipefail
           tag="wire-harness-${GITHUB_SHA::12}"
+          owner="$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
           {
             echo "IMAGE_TAG=${tag}"
             echo "BACKEND_IMAGE=wire-harness-backend:${tag}"
@@ -46,6 +48,8 @@ jobs:
             echo "BACKEND_TAR=wire-harness-backend-${tag}.tar.gz"
             echo "WEB_TAR=wire-harness-web-${tag}.tar.gz"
             echo "DEPLOY_FILES_TAR=wire-harness-deploy-files-${tag}.tgz"
+            echo "GHCR_BACKEND=ghcr.io/${owner}/wire-harness-backend:${tag}"
+            echo "GHCR_WEB=ghcr.io/${owner}/wire-harness-web:${tag}"
           } >> "$GITHUB_ENV"
 
       - name: Build backend image
@@ -67,12 +71,15 @@ jobs:
             -t "$WEB_IMAGE" \
             .
 
-      - name: Pack images
+      - name: Push images to GHCR
         run: |
           set -euo pipefail
-          docker save "$BACKEND_IMAGE" | gzip > "$BACKEND_TAR"
-          docker save "$WEB_IMAGE" | gzip > "$WEB_TAR"
-          ls -lh "$BACKEND_TAR" "$WEB_TAR"
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker tag "$BACKEND_IMAGE" "$GHCR_BACKEND"
+          docker tag "$WEB_IMAGE" "$GHCR_WEB"
+          docker push "$GHCR_BACKEND"
+          docker push "$GHCR_WEB"
+          echo "Pushed ${GHCR_BACKEND} and ${GHCR_WEB}"
 
       - name: Prepare SSH key
         run: |
@@ -90,17 +97,62 @@ jobs:
           tar -czf "$deploy_tar" deploy scripts
           ssh "${ssh_opts[@]}" -p "$ECS_PORT" "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}" \
             "mkdir -p '$ECS_DEPLOY_DIR'"
-          scp "${ssh_opts[@]}" -P "$ECS_PORT" "$deploy_tar" "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}:$ECS_DEPLOY_DIR/$DEPLOY_FILES_TAR"
+          scp "${ssh_opts[@]}" -P "$ECS_PORT" "$deploy_tar" \
+            "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}:$ECS_DEPLOY_DIR/$DEPLOY_FILES_TAR"
           ssh "${ssh_opts[@]}" -p "$ECS_PORT" "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}" \
             "set -euo pipefail; cd '$ECS_DEPLOY_DIR' && tar -xzf '$DEPLOY_FILES_TAR' && rm -f '$DEPLOY_FILES_TAR'"
 
-      - name: Upload and load images on ECS
+      - name: Load images on ECS
         run: |
           set -euo pipefail
           read -r -a ssh_opts <<< "$ECS_SSH_KEEPALIVE_OPTS"
-          scp "${ssh_opts[@]}" -P "$ECS_PORT" "$BACKEND_TAR" "$WEB_TAR" \
-            "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}:$ECS_DEPLOY_DIR/"
-          ssh "${ssh_opts[@]}" -p "$ECS_PORT" "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}" \
+          ssh_target="${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}"
+
+          load_via_ghcr() {
+            ssh "${ssh_opts[@]}" -p "$ECS_PORT" "$ssh_target" \
+              "set -euo pipefail
+               docker login ghcr.io -u '${{ github.actor }}' --password-stdin
+               docker pull '$GHCR_BACKEND'
+               docker pull '$GHCR_WEB'
+               docker tag '$GHCR_BACKEND' '$BACKEND_IMAGE'
+               docker tag '$GHCR_WEB' '$WEB_IMAGE'" \
+              <<< "${{ secrets.GITHUB_TOKEN }}"
+          }
+
+          if load_via_ghcr; then
+            echo "Loaded images on ECS via GHCR pull"
+            exit 0
+          fi
+
+          echo "GHCR pull failed; falling back to SCP (slower cross-region upload)" >&2
+          docker save "$BACKEND_IMAGE" | gzip > "$BACKEND_TAR"
+          docker save "$WEB_IMAGE" | gzip > "$WEB_TAR"
+          ls -lh "$BACKEND_TAR" "$WEB_TAR"
+
+          scp_upload() {
+            local file="$1"
+            local attempt=1
+            local delay=10
+            while [[ "$attempt" -le 3 ]]; do
+              if scp "${ssh_opts[@]}" -P "$ECS_PORT" "$file" "$ssh_target:$ECS_DEPLOY_DIR/"; then
+                return 0
+              fi
+              echo "SCP ${file} attempt ${attempt} failed, retry in ${delay}s" >&2
+              sleep "$delay"
+              delay=$((delay * 2))
+              attempt=$((attempt + 1))
+            done
+            return 1
+          }
+
+          scp_upload "$BACKEND_TAR" &
+          pid_backend=$!
+          scp_upload "$WEB_TAR" &
+          pid_web=$!
+          wait "$pid_backend"
+          wait "$pid_web"
+
+          ssh "${ssh_opts[@]}" -p "$ECS_PORT" "$ssh_target" \
             "set -euo pipefail; cd '$ECS_DEPLOY_DIR'; \
              gzip -dc '$BACKEND_TAR' | docker load; \
              gzip -dc '$WEB_TAR' | docker load; \
