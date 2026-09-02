@@ -8,11 +8,17 @@ COMPOSE_FILE="${COMPOSE_FILE:-$DEPLOY_DIR/deploy/docker-compose.ecs.yml}"
 PROJECT_NAME="${PROJECT_NAME:-wire-harness-prod}"
 RUNTIME_BACKEND_TAG="${RUNTIME_BACKEND_TAG:-wire-harness-backend:ecs}"
 RUNTIME_WEB_TAG="${RUNTIME_WEB_TAG:-wire-harness-web:ecs}"
-EDGE_MODE="${WIRE_HARNESS_EDGE_MODE:-shared-caddy}"
+EDGE_MODE="${WIRE_HARNESS_EDGE_MODE:-standalone-caddy}"
 
 # shellcheck disable=SC1090
 [[ -f "$ENV_FILE" ]] && set -a && source "$ENV_FILE" && set +a
-EDGE_MODE="${WIRE_HARNESS_EDGE_MODE:-shared-caddy}"
+EDGE_MODE="${WIRE_HARNESS_EDGE_MODE:-standalone-caddy}"
+MAIN_LIMS_DIR="${MAIN_LIMS_DIR:-/opt/lims-deploy}"
+
+if [[ "$EDGE_MODE" == "shared-caddy" && ! -f "${MAIN_LIMS_DIR}/config/Caddyfile" ]]; then
+  echo "未找到 ${MAIN_LIMS_DIR}/config/Caddyfile，自动切换为 standalone-caddy"
+  EDGE_MODE=standalone-caddy
+fi
 
 retag_if_set() {
   local src="$1"
@@ -39,7 +45,8 @@ docker compose "${compose_args[@]}" ps
 
 wait_ready() {
   local url="$1"
-  for i in 1 2 3 4 5 6 7 8 9 10; do
+  local attempts="${2:-30}"
+  for i in $(seq 1 "$attempts"); do
     if curl -fsS "${url}/healthz" >/dev/null && curl -fsS "${url}/ready" >/dev/null; then
       return 0
     fi
