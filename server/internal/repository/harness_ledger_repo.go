@@ -220,28 +220,3 @@ func (r *HarnessLedgerRepository) ListRecentProjects(ctx context.Context, tenant
 		Scan(&rows).Error
 	return rows, err
 }
-
-func (r *HarnessLedgerRepository) SeedDemo(ctx context.Context, tenantID int64) error {
-	var count int64
-	if err := r.db.WithContext(ctx).Model(&model.HarnessProject{}).Where("tenant_id = ?", tenantID).Count(&count).Error; err != nil {
-		return err
-	}
-	if count > 0 {
-		return nil
-	}
-	project := model.HarnessProject{
-		TenantID:      tenantID,
-		ProjectName:   "示例项目 A",
-		PlatformModel: "平台-01",
-		CircuitCount:  12,
-		SwitchCount:   8,
-	}
-	if err := r.db.WithContext(ctx).Create(&project).Error; err != nil {
-		return err
-	}
-	items := []model.HarnessItem{
-		{TenantID: tenantID, ProjectID: project.ID, HarnessName: "主控线束", HarnessNo: "WH-001", Purpose: "主控柜连接", Status: model.HarnessStatusInUse, ResponsiblePerson: "张三", SortOrder: 1},
-		{TenantID: tenantID, ProjectID: project.ID, HarnessName: "备用线束", HarnessNo: "WH-002", Purpose: "备用", Status: model.HarnessStatusIdle, ResponsiblePerson: "李四", SortOrder: 2},
-	}
-	return r.db.WithContext(ctx).Create(&items).Error
-}

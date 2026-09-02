@@ -18,7 +18,6 @@ func NewDashboardService(repo *repository.HarnessLedgerRepository) *DashboardSer
 
 func (s *DashboardService) GetStats(ctx context.Context) (*dto.DashboardStatsResp, error) {
 	tenantID := tenant.IDFromCtx(ctx)
-	_ = s.repo.SeedDemo(ctx, tenantID)
 
 	stats, err := s.repo.DashboardStats(ctx, tenantID)
 	if err != nil {

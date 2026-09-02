@@ -22,7 +22,6 @@ func NewHarnessManagementService(repo *repository.HarnessLedgerRepository) *Harn
 
 func (s *HarnessManagementService) ListItemsByProject(ctx context.Context, projectID int64) ([]dto.HarnessManagementItem, error) {
 	tenantID := tenant.IDFromCtx(ctx)
-	_ = s.repo.SeedDemo(ctx, tenantID)
 	if _, err := s.repo.GetProject(ctx, tenantID, projectID); err != nil {
 		return nil, apperror.ErrNotFound
 	}

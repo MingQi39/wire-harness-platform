@@ -41,7 +41,6 @@ func (s *HarnessLedgerService) ListProjects(ctx context.Context, keyword string,
 	if pageSize < 1 || pageSize > 200 {
 		pageSize = 20
 	}
-	_ = s.repo.SeedDemo(ctx, tenantID)
 	rows, total, err := s.repo.ListProjects(ctx, tenantID, keyword, page, pageSize)
 	if err != nil {
 		return nil, err
