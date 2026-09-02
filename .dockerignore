@@ -1,0 +1,13 @@
+.git
+.github
+.pnpm-store
+**/.DS_Store
+**/*.log
+web/node_modules
+web/dist
+server/.env
+web/.env
+web/.env.*
+!web/.env.example
+deploy/.env
+deploy/.env.*

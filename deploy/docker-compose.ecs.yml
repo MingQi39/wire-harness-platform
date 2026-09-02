@@ -1,0 +1,80 @@
+# 线束管理平台 ECS 部署（与 LIMS 同机时：数据目录 /data/wire-harness，勿与 /data/lims 混用）
+# 对外由主机 Nginx/Caddy 反代到 WEB_HOST_PORT（默认 8096），见 deploy/nginx-host.wire.houmq.cn.example
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-wire_harness}
+      POSTGRES_USER: ${DB_USER:-wire_harness}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?请在 .env 中设置 DB_PASSWORD}
+    volumes:
+      - /data/wire-harness/postgres:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-wire_harness} -d ${DB_NAME:-wire_harness}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: >
+      redis-server
+        --appendonly yes
+        --maxmemory ${REDIS_MAXMEMORY:-128mb}
+        --maxmemory-policy allkeys-lru
+        --requirepass ${REDIS_PASSWORD:?请在 .env 中设置 REDIS_PASSWORD}
+    volumes:
+      - /data/wire-harness/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    image: ${WIRE_HARNESS_BACKEND_IMAGE:-wire-harness-backend:ecs}
+    env_file:
+      - ../.env
+    environment:
+      APP_ENV: production
+      APP_PORT: "8080"
+      DEPLOY_MODE: onprem
+      MIGRATIONS_PATH: /app/migrations
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_SSL_MODE: disable
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      UPLOAD_DIR: /app/uploads
+      PASSWORD_ENCRYPT_KEY: ${PASSWORD_ENCRYPT_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://wire.houmq.cn}
+    volumes:
+      - /data/wire-harness/uploads:/app/uploads
+      - /data/wire-harness/backups:/app/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  web:
+    image: ${WIRE_HARNESS_WEB_IMAGE:-wire-harness-web:ecs}
+    ports:
+      - "${WEB_HOST_PORT:-8096}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped

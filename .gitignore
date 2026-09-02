@@ -8,6 +8,8 @@ server/.env
 web/.env
 web/.env.*
 web/.env.local
+deploy/.env
+!deploy/.env.ecs.example
 
 # go
 server/bin/

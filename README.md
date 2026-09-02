@@ -48,6 +48,17 @@ pnpm dev
 - **下表（线束明细）**：线束名称、编号、用途、状态（在用/空闲/报废）、责任人
 - 支持新增/编辑/删除、CSV 导入导出、下载导入模板
 
+## 生产部署（wire.houmq.cn）
+
+与 LIMS 共用腾讯云 ECS，数据目录 **`/data/wire-harness`**（独立 PostgreSQL/Redis，不与 LIMS 混用）。
+
+详见 [deploy/README.md](./deploy/README.md) 与 [deploy/github-environment.md](./deploy/github-environment.md)。
+
+```bash
+# GitHub Actions：main 推送或手动 Run workflow
+# 首次 ECS：sudo bash scripts/bootstrap-ecs.sh
+```
+
 ## 技术栈
 
 - 前端：React 19 + Vite 6 + Tailwind CSS 4 + TanStack Table

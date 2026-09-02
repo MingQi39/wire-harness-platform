@@ -1,0 +1,118 @@
+# 线束管理平台 ECS 部署（wire.houmq.cn）
+# 参考 lims-electron deploy-full.yml：同机 SSH 传镜像，数据目录 /data/wire-harness 独立。
+
+name: Deploy Wire Harness Platform
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+env:
+  DOCKER_BUILDKIT: "1"
+  ECS_PORT: ${{ secrets.ECS_PORT || '22' }}
+  ECS_DEPLOY_DIR: ${{ vars.ECS_DEPLOY_DIR || '/opt/wire-harness-deploy' }}
+  ECS_RUNTIME_ENV: ${{ vars.ECS_RUNTIME_ENV || '/opt/wire-harness-deploy/.env' }}
+  ECS_RUNTIME_COMPOSE: ${{ vars.ECS_RUNTIME_COMPOSE || '/opt/wire-harness-deploy/deploy/docker-compose.ecs.yml' }}
+  ECS_RUNTIME_PROJECT: ${{ vars.ECS_RUNTIME_PROJECT || 'wire-harness-prod' }}
+  ECS_SSH_KEEPALIVE_OPTS: "-o AddressFamily=inet -o ServerAliveInterval=20 -o ServerAliveCountMax=6 -o TCPKeepAlive=yes -o ConnectTimeout=20 -o ConnectionAttempts=3"
+
+jobs:
+  deploy:
+    name: Build and deploy wire harness platform
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: wire-harness-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Prepare image names
+        run: |
+          set -euo pipefail
+          tag="wire-harness-${GITHUB_SHA::12}"
+          {
+            echo "IMAGE_TAG=${tag}"
+            echo "BACKEND_IMAGE=wire-harness-backend:${tag}"
+            echo "WEB_IMAGE=wire-harness-web:${tag}"
+            echo "BACKEND_TAR=wire-harness-backend-${tag}.tar.gz"
+            echo "WEB_TAR=wire-harness-web-${tag}.tar.gz"
+            echo "DEPLOY_FILES_TAR=wire-harness-deploy-files-${tag}.tgz"
+          } >> "$GITHUB_ENV"
+
+      - name: Build backend image
+        run: |
+          set -euo pipefail
+          docker build -f deploy/Dockerfile.server -t "$BACKEND_IMAGE" .
+
+      - name: Build web image
+        env:
+          VITE_PASSWORD_ENCRYPT_KEY: ${{ secrets.VITE_PASSWORD_ENCRYPT_KEY }}
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || 'https://wire.houmq.cn/' }}
+        run: |
+          set -euo pipefail
+          : "${VITE_PASSWORD_ENCRYPT_KEY:?Missing GitHub secret VITE_PASSWORD_ENCRYPT_KEY}"
+          docker build \
+            --build-arg "VITE_PASSWORD_ENCRYPT_KEY=${VITE_PASSWORD_ENCRYPT_KEY}" \
+            --build-arg "VITE_API_BASE_URL=${VITE_API_BASE_URL}" \
+            -f deploy/Dockerfile.web \
+            -t "$WEB_IMAGE" \
+            .
+
+      - name: Pack images
+        run: |
+          set -euo pipefail
+          docker save "$BACKEND_IMAGE" | gzip > "$BACKEND_TAR"
+          docker save "$WEB_IMAGE" | gzip > "$WEB_TAR"
+          ls -lh "$BACKEND_TAR" "$WEB_TAR"
+
+      - name: Prepare SSH key
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.ECS_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -p "$ECS_PORT" "${{ secrets.ECS_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Sync deployment files to ECS
+        run: |
+          set -euo pipefail
+          read -r -a ssh_opts <<< "$ECS_SSH_KEEPALIVE_OPTS"
+          deploy_tar="$RUNNER_TEMP/$DEPLOY_FILES_TAR"
+          tar -czf "$deploy_tar" deploy scripts
+          ssh "${ssh_opts[@]}" -p "$ECS_PORT" "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}" \
+            "mkdir -p '$ECS_DEPLOY_DIR'"
+          scp "${ssh_opts[@]}" -P "$ECS_PORT" "$deploy_tar" "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}:$ECS_DEPLOY_DIR/$DEPLOY_FILES_TAR"
+          ssh "${ssh_opts[@]}" -p "$ECS_PORT" "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}" \
+            "set -euo pipefail; cd '$ECS_DEPLOY_DIR' && tar -xzf '$DEPLOY_FILES_TAR' && rm -f '$DEPLOY_FILES_TAR'"
+
+      - name: Upload and load images on ECS
+        run: |
+          set -euo pipefail
+          read -r -a ssh_opts <<< "$ECS_SSH_KEEPALIVE_OPTS"
+          scp "${ssh_opts[@]}" -P "$ECS_PORT" "$BACKEND_TAR" "$WEB_TAR" \
+            "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}:$ECS_DEPLOY_DIR/"
+          ssh "${ssh_opts[@]}" -p "$ECS_PORT" "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}" \
+            "set -euo pipefail; cd '$ECS_DEPLOY_DIR'; \
+             gzip -dc '$BACKEND_TAR' | docker load; \
+             gzip -dc '$WEB_TAR' | docker load; \
+             rm -f '$BACKEND_TAR' '$WEB_TAR'"
+
+      - name: Deploy on ECS
+        run: |
+          set -euo pipefail
+          read -r -a ssh_opts <<< "$ECS_SSH_KEEPALIVE_OPTS"
+          ssh "${ssh_opts[@]}" -p "$ECS_PORT" "${{ secrets.ECS_USER }}@${{ secrets.ECS_HOST }}" \
+            "set -euo pipefail; cd '$ECS_DEPLOY_DIR' && \
+             RETAG_BACKEND='$BACKEND_IMAGE' RETAG_WEB='$WEB_IMAGE' \
+             ENV_FILE='$ECS_RUNTIME_ENV' COMPOSE_FILE='$ECS_RUNTIME_COMPOSE' \
+             PROJECT_NAME='$ECS_RUNTIME_PROJECT' \
+             bash scripts/deploy-ecs.sh"

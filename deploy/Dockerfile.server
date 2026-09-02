@@ -1,0 +1,23 @@
+# syntax=docker/dockerfile:1.7
+
+FROM golang:1.25-alpine AS builder
+ARG GOPROXY=https://goproxy.cn,direct
+ENV GOPROXY=${GOPROXY}
+RUN apk add --no-cache git ca-certificates tzdata
+WORKDIR /src
+COPY server/go.mod server/go.sum ./
+RUN go mod download
+COPY server/ .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /out/wire-harness-server ./cmd/server/main.go
+
+FROM alpine:3.21
+RUN apk add --no-cache ca-certificates tzdata curl
+ENV TZ=Asia/Shanghai
+WORKDIR /app
+COPY --from=builder /out/wire-harness-server /app/wire-harness-server
+COPY server/migrations /app/migrations
+COPY deploy/docker-entrypoint.server.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh /app/wire-harness-server
+EXPOSE 8080
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+CMD ["/app/wire-harness-server"]
