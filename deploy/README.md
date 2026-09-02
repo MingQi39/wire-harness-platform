@@ -14,7 +14,8 @@
 | `/data/wire-harness/uploads` | 附件 |
 | `/data/wire-harness/backups` | 备份（预留） |
 
-HTTPS 由**主 LIMS Caddy** 自动签发证书（`scripts/register-wire-shared-caddy.sh` 注册 `wire.houmq.cn`）。  
+HTTPS 由**主机 Nginx** 统一终结（`WIRE_HARNESS_EDGE_MODE=host-nginx`，`scripts/register-wire-host-nginx.sh` 注册 `wire.houmq.cn → 127.0.0.1:8096`）。与 `ops.houmq.cn`、`houmq.cn` 等同机共享 443，**勿**在本 compose 启 `standalone-caddy`（会抢占 80/443 并停掉其它站点）。
+
 本机调试：`http://127.0.0.1:8096`（不对外暴露明文 HTTP）。
 
 ## GitHub Actions

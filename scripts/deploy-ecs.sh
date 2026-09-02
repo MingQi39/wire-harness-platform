@@ -8,16 +8,16 @@ COMPOSE_FILE="${COMPOSE_FILE:-$DEPLOY_DIR/deploy/docker-compose.ecs.yml}"
 PROJECT_NAME="${PROJECT_NAME:-wire-harness-prod}"
 RUNTIME_BACKEND_TAG="${RUNTIME_BACKEND_TAG:-wire-harness-backend:ecs}"
 RUNTIME_WEB_TAG="${RUNTIME_WEB_TAG:-wire-harness-web:ecs}"
-EDGE_MODE="${WIRE_HARNESS_EDGE_MODE:-standalone-caddy}"
+EDGE_MODE="${WIRE_HARNESS_EDGE_MODE:-host-nginx}"
 
 # shellcheck disable=SC1090
 [[ -f "$ENV_FILE" ]] && set -a && source "$ENV_FILE" && set +a
-EDGE_MODE="${WIRE_HARNESS_EDGE_MODE:-standalone-caddy}"
+EDGE_MODE="${WIRE_HARNESS_EDGE_MODE:-host-nginx}"
 MAIN_LIMS_DIR="${MAIN_LIMS_DIR:-/opt/lims-deploy}"
 
 if [[ "$EDGE_MODE" == "shared-caddy" && ! -f "${MAIN_LIMS_DIR}/config/Caddyfile" ]]; then
-  echo "未找到 ${MAIN_LIMS_DIR}/config/Caddyfile，自动切换为 standalone-caddy"
-  EDGE_MODE=standalone-caddy
+  echo "未找到 ${MAIN_LIMS_DIR}/config/Caddyfile，自动切换为 host-nginx（不占用 80/443，避免影响 ops.houmq.cn 等站点）"
+  EDGE_MODE=host-nginx
 fi
 
 retag_if_set() {
@@ -32,16 +32,29 @@ retag_if_set() {
 retag_if_set "${RETAG_BACKEND:-}" "$RUNTIME_BACKEND_TAG"
 retag_if_set "${RETAG_WEB:-}" "$RUNTIME_WEB_TAG"
 
-ensure_caddy_ports() {
-  local port pid
+assert_standalone_ports_available() {
+  local port
   for port in 80 443; do
     if ss -tlnp 2>/dev/null | grep -q ":${port} "; then
+      echo "ERROR: 端口 ${port} 已被占用。" >&2
       if systemctl is-active --quiet nginx 2>/dev/null; then
-        echo "Port ${port} occupied by nginx; stopping nginx so Caddy can bind 80/443..."
-        sudo systemctl stop nginx || true
+        echo "主机 Nginx 正在运行（ops.houmq.cn / houmq.cn 等依赖它）。" >&2
+        echo "同机部署请使用 WIRE_HARNESS_EDGE_MODE=host-nginx，勿使用 standalone-caddy。" >&2
+      else
+        echo "standalone-caddy 需要独占 80/443，请先释放端口或改用 host-nginx。" >&2
       fi
+      exit 1
     fi
   done
+}
+
+stop_standalone_caddy() {
+  docker compose "${compose_args[@]}" --profile standalone-caddy stop caddy 2>/dev/null || true
+  docker compose "${compose_args[@]}" --profile standalone-caddy rm -f caddy 2>/dev/null || true
+}
+
+ensure_host_nginx() {
+  bash "$DEPLOY_DIR/scripts/register-wire-host-nginx.sh"
 }
 
 docker network inspect lims-edge >/dev/null 2>&1 || docker network create lims-edge
@@ -50,10 +63,11 @@ cd "$DEPLOY_DIR"
 compose_args=(-f "$COMPOSE_FILE" --env-file "$ENV_FILE" -p "$PROJECT_NAME")
 if [[ "$EDGE_MODE" == "standalone-caddy" ]]; then
   mkdir -p /data/wire-harness/caddy/{data,config}
-  ensure_caddy_ports
+  assert_standalone_ports_available
   bash "$DEPLOY_DIR/scripts/render-caddyfile.sh" "$DEPLOY_DIR/deploy/Caddyfile.ecs"
   docker compose "${compose_args[@]}" --profile standalone-caddy up -d --remove-orphans
 else
+  stop_standalone_caddy
   docker compose "${compose_args[@]}" up -d --remove-orphans
 fi
 docker compose "${compose_args[@]}" ps
@@ -145,7 +159,14 @@ elif [[ "$EDGE_MODE" == "standalone-caddy" ]]; then
     echo "Deploy OK (HTTP only for now): http://${site_host}"
   fi
 else
-  echo "Deploy OK: ${local_health_url} (host-nginx mode)"
+  ensure_host_nginx
+  site_host="${SITE_ADDRESS:-wire.houmq.cn}"
+  if wait_https_local "$site_host"; then
+    echo "Deploy OK: https://${site_host} (host-nginx, 与 ops.houmq.cn 等同机共享 443)"
+  else
+    echo "WARN: host-nginx HTTPS 检查未通过: https://${site_host}" >&2
+    echo "Deploy OK: ${local_health_url} (container healthy; check nginx/certbot)"
+  fi
 fi
 
 if [[ "${DEPLOY_CLEANUP_DOCKER:-0}" == "1" ]]; then

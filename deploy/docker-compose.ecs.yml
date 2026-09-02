@@ -1,10 +1,9 @@
 # 线束管理平台 ECS 部署（与 LIMS 同机时：数据目录 /data/wire-harness，勿与 /data/lims 混用）
 #
-# 入口 HTTPS（推荐，与 LIMS 同机）：
-#   WIRE_HARNESS_EDGE_MODE=shared-caddy → scripts/register-wire-shared-caddy.sh 注册到主 LIMS Caddy
-# 备选：
-#   standalone-caddy → 本 compose 内 caddy 服务占 80/443
-#   host-nginx → WEB_HOST_PORT=8096 + deploy/nginx-host.wire.houmq.cn.example
+# 入口 HTTPS（与 ops.houmq.cn / houmq.cn 等同机时，勿让本 compose 占 80/443）：
+#   host-nginx（默认）→ WEB_HOST_PORT=8096 + scripts/register-wire-host-nginx.sh
+#   shared-caddy → scripts/register-wire-shared-caddy.sh 注册到主 LIMS Caddy
+#   standalone-caddy → 仅独占 ECS 时使用；同机有主机 Nginx 时会部署失败
 
 services:
   caddy:
