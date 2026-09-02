@@ -57,5 +57,6 @@
     "src/edition/**/*",
     "src/queryClient.ts",
     "vite.config.ts"
-  ]
+  ],
+  "exclude": ["**/*.test.ts", "**/*.test.tsx"]
 }
