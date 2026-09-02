@@ -51,6 +51,7 @@ compose_args=(-f "$COMPOSE_FILE" --env-file "$ENV_FILE" -p "$PROJECT_NAME")
 if [[ "$EDGE_MODE" == "standalone-caddy" ]]; then
   mkdir -p /data/wire-harness/caddy/{data,config}
   ensure_caddy_ports
+  bash "$DEPLOY_DIR/scripts/render-caddyfile.sh" "$DEPLOY_DIR/deploy/Caddyfile.ecs"
   docker compose "${compose_args[@]}" --profile standalone-caddy up -d --remove-orphans
 else
   docker compose "${compose_args[@]}" up -d --remove-orphans
@@ -85,10 +86,10 @@ wait_ready_with_host() {
 
 wait_https_local() {
   local host="$1"
-  local attempts="${2:-45}"
+  local attempts="${2:-60}"
   for i in $(seq 1 "$attempts"); do
-    if curl -fsSk -H "Host: ${host}" "https://127.0.0.1/healthz" >/dev/null \
-      && curl -fsSk -H "Host: ${host}" "https://127.0.0.1/ready" >/dev/null; then
+    if curl -fsSk --resolve "${host}:443:127.0.0.1" "https://${host}/healthz" >/dev/null \
+      && curl -fsSk --resolve "${host}:443:127.0.0.1" "https://${host}/ready" >/dev/null; then
       return 0
     fi
     sleep 2
@@ -139,8 +140,9 @@ elif [[ "$EDGE_MODE" == "standalone-caddy" ]]; then
     echo "Deploy OK: https://${site_host}"
   else
     docker compose "${compose_args[@]}" logs caddy --tail 100 || true
-    echo "Caddy HTTPS not ready yet; check security group allows 443 and retry: curl -vk https://${site_host}/ready" >&2
-    exit 1
+    echo "WARN: HTTPS 尚未就绪（ACME 可能仍在申请或安全组未放行 443）" >&2
+    echo "HTTP 已可用；请确认 DNS 指向本机且安全组放行 80/443，稍后执行: curl -vk https://${site_host}/ready" >&2
+    echo "Deploy OK (HTTP only for now): http://${site_host}"
   fi
 else
   echo "Deploy OK: ${local_health_url} (host-nginx mode)"

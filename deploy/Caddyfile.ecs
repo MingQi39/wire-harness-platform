@@ -1,6 +1,7 @@
+# 由 scripts/render-caddyfile.sh 在部署时生成；此处为仓库默认模板（自动 ACME）。
+
 wire.houmq.cn {
 	encode gzip
-
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
@@ -8,7 +9,6 @@ wire.houmq.cn {
 		Referrer-Policy "strict-origin-when-cross-origin"
 		-Server
 	}
-
 	handle {
 		reverse_proxy web:80 {
 			health_uri /ready
@@ -16,9 +16,4 @@ wire.houmq.cn {
 			health_timeout 3s
 		}
 	}
-}
-
-# HTTP → HTTPS
-http://wire.houmq.cn {
-	redir https://wire.houmq.cn{uri} permanent
 }

@@ -18,6 +18,7 @@ services:
       - ./Caddyfile.ecs:/etc/caddy/Caddyfile:ro
       - /data/wire-harness/caddy/data:/data
       - /data/wire-harness/caddy/config:/config
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       web:
         condition: service_started
