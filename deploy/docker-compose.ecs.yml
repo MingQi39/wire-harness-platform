@@ -10,10 +10,6 @@ services:
   caddy:
     profiles: ["standalone-caddy"]
     image: caddy:2-alpine
-    env_file:
-      - ../.env
-    environment:
-      SITE_ADDRESS: ${SITE_ADDRESS:?请在 .env 中设置 SITE_ADDRESS}
     ports:
       - "80:80"
       - "443:443"
@@ -22,11 +18,12 @@ services:
       - ./Caddyfile.ecs:/etc/caddy/Caddyfile:ro
       - /data/wire-harness/caddy/data:/data
       - /data/wire-harness/caddy/config:/config
-      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       web:
         condition: service_started
     restart: unless-stopped
+    networks:
+      - default
 
   postgres:
     image: postgres:15-alpine

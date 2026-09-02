@@ -69,6 +69,33 @@ wait_ready() {
   return 1
 }
 
+wait_ready_with_host() {
+  local base_url="$1"
+  local host="$2"
+  local attempts="${3:-45}"
+  for i in $(seq 1 "$attempts"); do
+    if curl -fsS -H "Host: ${host}" "${base_url}/healthz" >/dev/null \
+      && curl -fsS -H "Host: ${host}" "${base_url}/ready" >/dev/null; then
+      return 0
+    fi
+    sleep 2
+  done
+  return 1
+}
+
+wait_https_local() {
+  local host="$1"
+  local attempts="${2:-45}"
+  for i in $(seq 1 "$attempts"); do
+    if curl -fsSk -H "Host: ${host}" "https://127.0.0.1/healthz" >/dev/null \
+      && curl -fsSk -H "Host: ${host}" "https://127.0.0.1/ready" >/dev/null; then
+      return 0
+    fi
+    sleep 2
+  done
+  return 1
+}
+
 wait_ready_in_container() {
   for i in 1 2 3 4 5 6 7 8 9 10; do
     if docker compose "${compose_args[@]}" exec -T web curl -fsS http://127.0.0.1/healthz >/dev/null \
@@ -101,10 +128,18 @@ if [[ "$EDGE_MODE" == "shared-caddy" ]]; then
     exit 1
   fi
 elif [[ "$EDGE_MODE" == "standalone-caddy" ]]; then
-  if wait_ready "$public_site"; then
-    echo "Deploy OK: ${public_site}"
+  site_host="${SITE_ADDRESS:-wire.houmq.cn}"
+  if ! wait_ready_with_host "http://127.0.0.1" "$site_host"; then
+    docker compose "${compose_args[@]}" logs caddy --tail 100 || true
+    echo "Caddy HTTP health check failed on 127.0.0.1" >&2
+    exit 1
+  fi
+  echo "Caddy HTTP OK (127.0.0.1)"
+  if wait_https_local "$site_host"; then
+    echo "Deploy OK: https://${site_host}"
   else
-    echo "standalone Caddy health check failed: ${public_site}" >&2
+    docker compose "${compose_args[@]}" logs caddy --tail 100 || true
+    echo "Caddy HTTPS not ready yet; check security group allows 443 and retry: curl -vk https://${site_host}/ready" >&2
     exit 1
   fi
 else

@@ -1,7 +1,4 @@
-# 独立 Caddy 模式（WIRE_HARNESS_EDGE_MODE=standalone-caddy）使用。
-# 共享主 LIMS Caddy 时由 scripts/register-wire-shared-caddy.sh 写入主 Caddyfile。
-
-{$SITE_ADDRESS} {
+wire.houmq.cn {
 	encode gzip
 
 	header {
@@ -19,4 +16,9 @@
 			health_timeout 3s
 		}
 	}
+}
+
+# HTTP → HTTPS
+http://wire.houmq.cn {
+	redir https://wire.houmq.cn{uri} permanent
 }
