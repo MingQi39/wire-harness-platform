@@ -27,8 +27,16 @@ docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" -p "$PROJECT_NAME" ps
 
 web_port="$(grep -E '^WEB_HOST_PORT=' "$ENV_FILE" | tail -n1 | cut -d= -f2- || true)"
 web_port="${web_port:-8096}"
-curl -fsS "http://127.0.0.1:${web_port}/healthz" >/dev/null
-curl -fsS "http://127.0.0.1:${web_port}/ready" >/dev/null
+for i in 1 2 3 4 5 6 7 8 9 10; do
+  if curl -fsS "http://127.0.0.1:${web_port}/healthz" >/dev/null && curl -fsS "http://127.0.0.1:${web_port}/ready" >/dev/null; then
+    break
+  fi
+  if [[ "$i" -eq 10 ]]; then
+    echo "health check failed on :${web_port}" >&2
+    exit 1
+  fi
+  sleep 2
+done
 echo "Deploy OK: http://127.0.0.1:${web_port}"
 
 if [[ "${DEPLOY_CLEANUP_DOCKER:-0}" == "1" ]]; then

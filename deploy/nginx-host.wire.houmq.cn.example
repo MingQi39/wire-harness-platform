@@ -18,8 +18,8 @@ server {
 
     listen [::]:443 ssl;
     listen 443 ssl;
-    ssl_certificate /etc/letsencrypt/live/houmq.cn/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/houmq.cn/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/wire.houmq.cn/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/wire.houmq.cn/privkey.pem;
     include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 }
