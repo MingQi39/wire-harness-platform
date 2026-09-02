@@ -51,6 +51,8 @@
     "src/utils/userDisplay.ts",
     "src/utils/permissionAbility.ts",
     "src/utils/accessToken.ts",
+    "src/utils/harnessProjectRoute.ts",
+    "src/utils/invalidateHarnessData.ts",
     "src/lib/**/*",
     "src/theme/**/*",
     "src/styles/**/*",

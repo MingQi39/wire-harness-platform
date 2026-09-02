@@ -54,9 +54,16 @@ export const HARNESS_STATUS_OPTIONS = [
   { label: '报废', value: 'scrapped' },
 ] as const
 
+export interface HarnessProjectDetail extends HarnessProjectItem {
+  attachment_url?: string
+}
+
 export const harnessLedgerApi = {
   listProjects: (params: HarnessProjectListParams) =>
     client.get<never, PaginatedHarnessProjects>('/api/v1/harness-projects', { params }),
+
+  getProject: (id: number) =>
+    client.get<never, HarnessProjectDetail>(`/api/v1/harness-projects/${id}`),
 
   createProject: (data: HarnessProjectForm) =>
     client.post<never, HarnessProjectItem>('/api/v1/harness-projects', data),
@@ -78,6 +85,9 @@ export const harnessLedgerApi = {
 
   listItems: (projectId: number) =>
     client.get<never, HarnessWireItem[]>(`/api/v1/harness-projects/${projectId}/items`),
+
+  getItem: (id: number) =>
+    client.get<never, HarnessWireItem>(`/api/v1/harness-items/${id}`),
 
   createItem: (projectId: number, data: HarnessItemForm) =>
     client.post<never, HarnessWireItem>(`/api/v1/harness-projects/${projectId}/items`, data),

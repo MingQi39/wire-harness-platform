@@ -52,6 +52,21 @@ func (s *HarnessLedgerService) ListProjects(ctx context.Context, keyword string,
 	return &dto.PaginatedHarnessProjects{Items: items, Total: total, Page: page, PageSize: pageSize}, nil
 }
 
+func (s *HarnessLedgerService) GetProject(ctx context.Context, id int64) (*dto.HarnessProjectDetail, error) {
+	tenantID := tenant.IDFromCtx(ctx)
+	row, err := s.repo.GetProject(ctx, tenantID, id)
+	if err != nil {
+		return nil, apperror.WrapNotFound(err, "项目不存在")
+	}
+	detail := &dto.HarnessProjectDetail{
+		HarnessProjectListItem: projectToListItem(*row),
+	}
+	if row.AttachmentPath != "" {
+		detail.AttachmentURL = fmt.Sprintf("/api/v1/harness-projects/%d/attachment", row.ID)
+	}
+	return detail, nil
+}
+
 func (s *HarnessLedgerService) CreateProject(ctx context.Context, req dto.CreateHarnessProjectReq) (*dto.HarnessProjectListItem, error) {
 	tenantID := tenant.IDFromCtx(ctx)
 	row := &model.HarnessProject{
@@ -154,6 +169,16 @@ func (s *HarnessLedgerService) ListItems(ctx context.Context, projectID int64) (
 		items = append(items, itemToDTO(row))
 	}
 	return items, nil
+}
+
+func (s *HarnessLedgerService) GetItem(ctx context.Context, id int64) (*dto.HarnessItemListItem, error) {
+	tenantID := tenant.IDFromCtx(ctx)
+	row, err := s.repo.GetItem(ctx, tenantID, id)
+	if err != nil {
+		return nil, apperror.WrapNotFound(err, "线束不存在")
+	}
+	item := itemToDTO(*row)
+	return &item, nil
 }
 
 func (s *HarnessLedgerService) CreateItem(ctx context.Context, projectID int64, req dto.CreateHarnessItemReq) (*dto.HarnessItemListItem, error) {

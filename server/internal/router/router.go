@@ -134,6 +134,7 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, rdb *redis.Client, d *dep
 		{
 			projects.GET("", d.ledgerHandler.ListProjects)
 			projects.POST("", d.ledgerHandler.CreateProject)
+			projects.GET("/:id", d.ledgerHandler.GetProject)
 			projects.PUT("/:id", d.ledgerHandler.UpdateProject)
 			projects.DELETE("/:id", d.ledgerHandler.DeleteProject)
 			projects.POST("/:id/attachment", d.ledgerHandler.UploadAttachment)
@@ -146,11 +147,11 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, rdb *redis.Client, d *dep
 
 		items := authed.Group("/harness-items")
 		{
+			items.GET("/import-template", d.ledgerHandler.ImportTemplate)
+			items.GET("/:id", d.ledgerHandler.GetItem)
 			items.PUT("/:id", d.ledgerHandler.UpdateItem)
 			items.DELETE("/:id", d.ledgerHandler.DeleteItem)
 		}
-
-		authed.GET("/harness-items/import-template", d.ledgerHandler.ImportTemplate)
 
 		authed.GET("/dashboard/stats", d.dashboardHandler.GetStats)
 

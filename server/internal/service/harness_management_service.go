@@ -152,18 +152,50 @@ func (s *HarnessManagementService) loadAndValidateIDs(ctx context.Context, tenan
 
 func itemToManagement(row model.HarnessItem) dto.HarnessManagementItem {
 	return dto.HarnessManagementItem{
-		ID:               row.ID,
-		ProjectID:        row.ProjectID,
-		HarnessName:      row.HarnessName,
-		HarnessNo:        row.HarnessNo,
-		Purpose:          row.Purpose,
-		StoredAt:         formatTimePtr(row.StoredAt),
-		StoredBy:         row.StoredBy,
-		OutboundAt:       formatTimePtr(row.OutboundAt),
-		OutboundBy:       row.OutboundBy,
-		ScrappedAt:       formatTimePtr(row.ScrappedAt),
-		ScrapConfirmedBy: row.ScrapConfirmedBy,
-		LifecycleStatus:  row.LifecycleStatus,
+		ID:                   row.ID,
+		ProjectID:            row.ProjectID,
+		HarnessName:          row.HarnessName,
+		HarnessNo:            row.HarnessNo,
+		Purpose:              row.Purpose,
+		Status:               row.Status,
+		StatusLabel:          harnessStatusLabel(row.Status),
+		ResponsiblePerson:    row.ResponsiblePerson,
+		StoredAt:             formatTimePtr(row.StoredAt),
+		StoredBy:             row.StoredBy,
+		OutboundAt:           formatTimePtr(row.OutboundAt),
+		OutboundBy:           row.OutboundBy,
+		ScrappedAt:           formatTimePtr(row.ScrappedAt),
+		ScrapConfirmedBy:     row.ScrapConfirmedBy,
+		LifecycleStatus:      row.LifecycleStatus,
+		LifecycleStatusLabel: lifecycleStatusLabel(row.LifecycleStatus),
+	}
+}
+
+func harnessStatusLabel(status string) string {
+	switch status {
+	case model.HarnessStatusInUse:
+		return "在用"
+	case model.HarnessStatusIdle:
+		return "空闲"
+	case model.HarnessStatusScrapped:
+		return "报废"
+	default:
+		return status
+	}
+}
+
+func lifecycleStatusLabel(status string) string {
+	switch status {
+	case model.LifecyclePending:
+		return "待入库"
+	case model.LifecycleInStock:
+		return "在库"
+	case model.LifecycleOutStock:
+		return "已出库"
+	case model.LifecycleScrapped:
+		return "已报废"
+	default:
+		return status
 	}
 }
 

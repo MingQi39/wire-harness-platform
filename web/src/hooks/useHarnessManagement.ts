@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { harnessManagementApi } from '@/api/harnessManagement'
+import { invalidateHarnessData } from '@/utils/invalidateHarnessData'
 
 export function useHarnessManagementItems(projectId: number | null) {
   return useQuery({
@@ -19,13 +20,7 @@ export function useHarnessOperationLogs(itemId: number | null, open: boolean) {
 
 export function useHarnessManagementMutations(projectId: number | null) {
   const qc = useQueryClient()
-  const invalidate = () => {
-    if (projectId) {
-      void qc.invalidateQueries({ queryKey: ['harness-management-items', projectId] })
-    }
-    void qc.invalidateQueries({ queryKey: ['harness-operation-logs'] })
-    void qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
-  }
+  const invalidate = () => invalidateHarnessData(qc, projectId)
   return {
     stockIn: useMutation({
       mutationFn: (ids: number[]) => harnessManagementApi.stockIn(ids),

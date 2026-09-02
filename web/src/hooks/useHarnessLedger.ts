@@ -5,6 +5,7 @@ import {
   type HarnessProjectForm,
   type HarnessProjectListParams,
 } from '@/api/harnessLedger'
+import { invalidateHarnessData } from '@/utils/invalidateHarnessData'
 
 export function useHarnessProjects(params: HarnessProjectListParams) {
   return useQuery({
@@ -23,40 +24,31 @@ export function useHarnessItems(projectId: number | null) {
 
 export function useHarnessProjectMutations(listParams: HarnessProjectListParams) {
   const qc = useQueryClient()
-  const invalidate = () => {
-    void qc.invalidateQueries({ queryKey: ['harness-projects', listParams] })
-    void qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
-  }
+  const invalidate = (projectId?: number | null) => invalidateHarnessData(qc, projectId)
   return {
     create: useMutation({
       mutationFn: (data: HarnessProjectForm) => harnessLedgerApi.createProject(data),
-      onSuccess: invalidate,
+      onSuccess: () => invalidate(),
     }),
     update: useMutation({
       mutationFn: ({ id, data }: { id: number; data: HarnessProjectForm }) =>
         harnessLedgerApi.updateProject(id, data),
-      onSuccess: invalidate,
+      onSuccess: (_data, vars) => invalidate(vars.id),
     }),
     remove: useMutation({
       mutationFn: (id: number) => harnessLedgerApi.deleteProject(id),
-      onSuccess: invalidate,
+      onSuccess: (_data, id) => invalidate(id),
     }),
     uploadAttachment: useMutation({
       mutationFn: ({ id, file }: { id: number; file: File }) => harnessLedgerApi.uploadAttachment(id, file),
-      onSuccess: invalidate,
+      onSuccess: (_data, vars) => invalidate(vars.id),
     }),
   }
 }
 
 export function useHarnessItemMutations(projectId: number | null, listParams: HarnessProjectListParams) {
   const qc = useQueryClient()
-  const invalidate = () => {
-    if (projectId) {
-      void qc.invalidateQueries({ queryKey: ['harness-items', projectId] })
-    }
-    void qc.invalidateQueries({ queryKey: ['harness-projects', listParams] })
-    void qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
-  }
+  const invalidate = () => invalidateHarnessData(qc, projectId)
   return {
     create: useMutation({
       mutationFn: (data: HarnessItemForm) => harnessLedgerApi.createItem(projectId!, data),

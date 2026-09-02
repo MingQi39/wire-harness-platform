@@ -6,6 +6,9 @@ export interface HarnessManagementItem {
   harness_name: string
   harness_no: string
   purpose: string
+  status: 'in_use' | 'idle' | 'scrapped'
+  status_label: string
+  responsible_person: string
   stored_at: string | null
   stored_by: string
   outbound_at: string | null
@@ -13,6 +16,7 @@ export interface HarnessManagementItem {
   scrapped_at: string | null
   scrap_confirmed_by: string
   lifecycle_status: string
+  lifecycle_status_label: string
 }
 
 export interface HarnessOperationLogItem {

@@ -48,6 +48,19 @@ func (h *HarnessLedgerHandler) CreateProject(c *gin.Context) {
 	response.Success(c, data)
 }
 
+func (h *HarnessLedgerHandler) GetProject(c *gin.Context) {
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return
+	}
+	data, err := h.svc.GetProject(c.Request.Context(), id)
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.Success(c, data)
+}
+
 func (h *HarnessLedgerHandler) UpdateProject(c *gin.Context) {
 	id, err := parseIDParam(c, "id")
 	if err != nil {
@@ -137,6 +150,19 @@ func (h *HarnessLedgerHandler) CreateItem(c *gin.Context) {
 		return
 	}
 	data, err := h.svc.CreateItem(c.Request.Context(), projectID, *req)
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.Success(c, data)
+}
+
+func (h *HarnessLedgerHandler) GetItem(c *gin.Context) {
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return
+	}
+	data, err := h.svc.GetItem(c.Request.Context(), id)
 	if err != nil {
 		response.Fail(c, err)
 		return

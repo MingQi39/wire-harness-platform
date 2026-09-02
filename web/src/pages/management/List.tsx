@@ -3,11 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ConfigurableDataTable } from '@/components/ConfigurableTable'
 import type { TableColumnDef } from '@/components/ConfigurableTable'
 import { SemanticButton } from '@/components/SemanticButton'
-import { Button, Card, Table } from '@/components/ui/app-ui'
+import { TableRowActions } from '@/components/TableRowActions'
+import { Button, Card, Descriptions, Empty, Form, Input, Select, Table } from '@/components/ui/app-ui'
+import { FormModal } from '@/components/ui/form-modal'
 import type { HarnessManagementItem } from '@/api/harnessManagement'
 import type { HarnessProjectItem } from '@/api/harnessLedger'
+import { HARNESS_STATUS_OPTIONS } from '@/api/harnessLedger'
 import { getApiErrorMessage } from '@/api/client'
-import { useHarnessProjects } from '@/hooks/useHarnessLedger'
+import { useHarnessProjects, useHarnessItemMutations } from '@/hooks/useHarnessLedger'
 import {
   useHarnessManagementItems,
   useHarnessManagementMutations,
@@ -19,9 +22,17 @@ import { appMessage } from '@/utils/appMessage'
 import { formatDateTime } from '@/utils/format'
 import { PackageIcon, PackageMinusIcon, Trash2Icon } from 'lucide-react'
 import { HarnessOperationLogModal } from './HarnessOperationLogModal'
-import { parseProjectRouteId, resolveSelectedProjectId } from '@/utils/harnessProjectRoute'
+import { parseProjectRouteId, resolveSelectedProjectId, useSyncProjectRoute, buildProjectRoute } from '@/utils/harnessProjectRoute'
 
 const LIST_PARAMS = { page: 1, page_size: 200 } as const
+
+type ItemFormValues = {
+  harness_name: string
+  harness_no: string
+  purpose: string
+  status: string
+  responsible_person: string
+}
 
 function SectionHeader({ title }: { title: ReactNode }) {
   return (
@@ -48,26 +59,14 @@ export default function HarnessManagementPage() {
     [projects, routeProjectId],
   )
 
-  useEffect(() => {
-    if (!projectsReady) return
-
-    if (projects.length === 0) {
-      if (projectIdParam) navigate('/management', { replace: true })
-      return
-    }
-
-    const routeMatchesProject =
-      routeProjectId != null && projects.some((row) => row.id === routeProjectId)
-    if (routeMatchesProject) return
-
-    const fallbackId = projects[0]?.id
-    if (fallbackId != null) {
-      navigate(`/management/${fallbackId}`, { replace: true })
-    }
-  }, [projects, projectsReady, projectIdParam, routeProjectId, navigate])
+  useSyncProjectRoute('/management', projects, projectsReady, routeProjectId, projectIdParam)
 
   const [selectedKeys, setSelectedKeys] = useState<number[]>([])
   const [logItem, setLogItem] = useState<HarnessManagementItem | null>(null)
+  const [itemViewRow, setItemViewRow] = useState<HarnessManagementItem | null>(null)
+  const [itemModalOpen, setItemModalOpen] = useState(false)
+  const [editingItemId, setEditingItemId] = useState<number | null>(null)
+  const [itemForm] = Form.useForm<ItemFormValues>()
 
   useEffect(() => {
     setSelectedKeys([])
@@ -86,6 +85,7 @@ export default function HarnessManagementPage() {
 
   const { data: items = [], isLoading: itemsLoading } = useHarnessManagementItems(selectedProjectId)
   const mutations = useHarnessManagementMutations(selectedProjectId)
+  const itemMutations = useHarnessItemMutations(selectedProjectId, LIST_PARAMS)
 
   const leftScroll = useContainerTableBodyHeight(TABLE_BODY_SCROLL_RESERVE)
   const rightScroll = useContainerTableBodyHeight(TABLE_BODY_SCROLL_RESERVE, [items.length, selectedProjectId])
@@ -118,7 +118,41 @@ export default function HarnessManagementPage() {
       navigate('/management', { replace: true })
       return
     }
-    navigate(`/management/${id}`, { replace: true })
+    navigate(buildProjectRoute('/management', id), { replace: true })
+  }
+
+  const openEditItem = (row: HarnessManagementItem) => {
+    setEditingItemId(row.id)
+    itemForm.setFieldsValue({
+      harness_name: row.harness_name,
+      harness_no: row.harness_no,
+      purpose: row.purpose,
+      status: row.status,
+      responsible_person: row.responsible_person,
+    })
+    setItemModalOpen(true)
+  }
+
+  const submitItem = async () => {
+    const values = await itemForm.validateFields()
+    if (editingItemId == null) return
+    try {
+      await itemMutations.update.mutateAsync({ id: editingItemId, data: values })
+      appMessage().success('已更新线束')
+      setItemModalOpen(false)
+    } catch (err) {
+      appMessage().error(getApiErrorMessage(err))
+    }
+  }
+
+  const handleDeleteItem = async (row: HarnessManagementItem) => {
+    try {
+      await itemMutations.remove.mutateAsync(row.id)
+      appMessage().success('已删除线束')
+      setSelectedKeys((prev) => prev.filter((id) => id !== row.id))
+    } catch (err) {
+      appMessage().error(getApiErrorMessage(err))
+    }
   }
 
   const projectColumns = useMemo<TableColumnDef<HarnessProjectItem>[]>(
@@ -167,8 +201,24 @@ export default function HarnessManagementPage() {
           </Button>
         ),
       },
+      {
+        key: 'actions',
+        title: '操作',
+        width: 148,
+        fixed: 'right',
+        align: 'center',
+        render: (_, row) => (
+          <TableRowActions
+            onView={() => setItemViewRow(row)}
+            onEdit={() => openEditItem(row)}
+            onDelete={() => handleDeleteItem(row)}
+            deleteTitle="删除线束？"
+            deleteDescription={`确定删除「${row.harness_name || row.harness_no || '该线束'}」吗？`}
+          />
+        ),
+      },
     ],
-    [],
+    [itemMutations],
   )
 
   const summaryColumns = [
@@ -196,7 +246,9 @@ export default function HarnessManagementPage() {
     itemsLoading ||
     mutations.stockIn.isPending ||
     mutations.stockOut.isPending ||
-    mutations.scrap.isPending
+    mutations.scrap.isPending ||
+    itemMutations.update.isPending ||
+    itemMutations.remove.isPending
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -217,19 +269,25 @@ export default function HarnessManagementPage() {
         >
           <SectionHeader title="项目列表" />
           <div ref={leftScroll.ref} className="min-h-0 flex-1">
-            <ConfigurableDataTable<HarnessProjectItem>
-              storageKey="harness-management-projects"
-              rowKey="id"
-              columnDefs={projectColumns}
-              dataSource={projects}
-              loading={projectsLoading || projectsFetching}
-              selectedRowKey={selectedProjectId}
-              onSelectedRowChange={handleSelectProject}
-              pagination={false}
-              showColumnSettingsTrigger={false}
-              scroll={{ y: leftScroll.scrollY }}
-              rowClassName={(row) => (row.id === selectedProjectId ? 'bg-primary/5' : '')}
-            />
+            {projectsReady && projects.length === 0 ? (
+              <div className="flex h-full min-h-[160px] items-center justify-center">
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无项目，请在线束台账中新增" />
+              </div>
+            ) : (
+              <ConfigurableDataTable<HarnessProjectItem>
+                storageKey="harness-management-projects"
+                rowKey="id"
+                columnDefs={projectColumns}
+                dataSource={projects}
+                loading={projectsLoading || projectsFetching}
+                selectedRowKey={selectedProjectId ?? undefined}
+                onSelectedRowChange={handleSelectProject}
+                pagination={false}
+                showColumnSettingsTrigger={false}
+                scroll={{ y: leftScroll.scrollY }}
+                rowClassName={(row) => (row.id === selectedProjectId ? 'bg-primary/5' : '')}
+              />
+            )}
           </div>
         </Card>
 
@@ -258,7 +316,7 @@ export default function HarnessManagementPage() {
         >
           {!selectedProject ? (
             <div className="flex flex-1 items-center justify-center text-sm text-slate-400">
-              请在左侧选择项目
+              {projects.length === 0 ? '暂无项目数据' : '请在左侧选择项目'}
             </div>
           ) : (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-3 pt-2">
@@ -310,7 +368,7 @@ export default function HarnessManagementPage() {
                   preserveSelectedRowKeys
                   pagination={false}
                   showColumnSettingsTrigger={false}
-                  scroll={{ x: 1500, y: rightScroll.scrollY }}
+                  scroll={{ x: 1648, y: rightScroll.scrollY }}
                 />
               </div>
             </div>
@@ -323,6 +381,60 @@ export default function HarnessManagementPage() {
         item={logItem}
         onClose={() => setLogItem(null)}
       />
+
+      <FormModal
+        title="修改线束"
+        open={itemModalOpen}
+        onCancel={() => setItemModalOpen(false)}
+        onOk={() => void submitItem()}
+        confirmLoading={itemMutations.update.isPending}
+      >
+        <Form form={itemForm} layout="vertical">
+          <Form.Item name="harness_name" label="线束名称" rules={[{ required: true, message: '请输入线束名称' }]}>
+            <Input placeholder="线束名称" />
+          </Form.Item>
+          <Form.Item name="harness_no" label="线束编号">
+            <Input placeholder="线束编号" />
+          </Form.Item>
+          <Form.Item name="purpose" label="线束用途">
+            <Input placeholder="线束用途" />
+          </Form.Item>
+          <Form.Item name="status" label="线束状态">
+            <Select options={[...HARNESS_STATUS_OPTIONS]} />
+          </Form.Item>
+          <Form.Item name="responsible_person" label="责任人">
+            <Input placeholder="责任人" />
+          </Form.Item>
+        </Form>
+      </FormModal>
+
+      <FormModal
+        title="查看线束"
+        open={itemViewRow != null}
+        onCancel={() => setItemViewRow(null)}
+        footer={
+          <div className="flex justify-end">
+            <Button onClick={() => setItemViewRow(null)}>关闭</Button>
+          </div>
+        }
+      >
+        {itemViewRow ? (
+          <Descriptions column={1} bordered size="small">
+            <Descriptions.Item label="线束名称">{itemViewRow.harness_name}</Descriptions.Item>
+            <Descriptions.Item label="线束编号">{itemViewRow.harness_no || '—'}</Descriptions.Item>
+            <Descriptions.Item label="线束用途">{itemViewRow.purpose || '—'}</Descriptions.Item>
+            <Descriptions.Item label="线束状态">{itemViewRow.status_label}</Descriptions.Item>
+            <Descriptions.Item label="责任人">{itemViewRow.responsible_person || '—'}</Descriptions.Item>
+            <Descriptions.Item label="库存状态">{itemViewRow.lifecycle_status_label}</Descriptions.Item>
+            <Descriptions.Item label="入库时间">{formatDateTime(itemViewRow.stored_at)}</Descriptions.Item>
+            <Descriptions.Item label="入库人">{itemViewRow.stored_by || '—'}</Descriptions.Item>
+            <Descriptions.Item label="出库时间">{formatDateTime(itemViewRow.outbound_at)}</Descriptions.Item>
+            <Descriptions.Item label="出库人">{itemViewRow.outbound_by || '—'}</Descriptions.Item>
+            <Descriptions.Item label="报废时间">{formatDateTime(itemViewRow.scrapped_at)}</Descriptions.Item>
+            <Descriptions.Item label="报废确认人">{itemViewRow.scrap_confirmed_by || '—'}</Descriptions.Item>
+          </Descriptions>
+        ) : null}
+      </FormModal>
     </div>
   )
 }

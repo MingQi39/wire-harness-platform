@@ -47,14 +47,13 @@ func (r *HarnessLedgerRepository) CreateProject(ctx context.Context, row *model.
 
 func (r *HarnessLedgerRepository) UpdateProject(ctx context.Context, tenantID int64, row *model.HarnessProject) error {
 	return r.db.WithContext(ctx).
+		Model(&model.HarnessProject{}).
 		Where("tenant_id = ? AND id = ?", tenantID, row.ID).
 		Updates(map[string]interface{}{
-			"project_name":    row.ProjectName,
-			"platform_model":  row.PlatformModel,
-			"circuit_count":   row.CircuitCount,
-			"switch_count":    row.SwitchCount,
-			"attachment_name": row.AttachmentName,
-			"attachment_path": row.AttachmentPath,
+			"project_name":   row.ProjectName,
+			"platform_model": row.PlatformModel,
+			"circuit_count":  row.CircuitCount,
+			"switch_count":   row.SwitchCount,
 		}).Error
 }
 
@@ -93,13 +92,14 @@ func (r *HarnessLedgerRepository) CreateItems(ctx context.Context, rows []model.
 
 func (r *HarnessLedgerRepository) UpdateItem(ctx context.Context, tenantID int64, row *model.HarnessItem) error {
 	return r.db.WithContext(ctx).
+		Model(&model.HarnessItem{}).
 		Where("tenant_id = ? AND id = ?", tenantID, row.ID).
 		Updates(map[string]interface{}{
-			"harness_name":        row.HarnessName,
-			"harness_no":          row.HarnessNo,
-			"purpose":             row.Purpose,
-			"status":              row.Status,
-			"responsible_person":  row.ResponsiblePerson,
+			"harness_name":       row.HarnessName,
+			"harness_no":         row.HarnessNo,
+			"purpose":            row.Purpose,
+			"status":             row.Status,
+			"responsible_person": row.ResponsiblePerson,
 		}).Error
 }
 
