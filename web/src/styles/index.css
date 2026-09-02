@@ -1,0 +1,607 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * 主题色请在 src/theme/colors.ts 中修改 THEME_PRIMARY 变量，
+ * 运行时 injectThemeVars() 会自动覆盖下方 @theme 中的占位值。
+ * @theme 中的值仅供 Tailwind CSS 编译期生成 utility class 名称。
+ */
+@theme {
+  --color-primary: #1677ff;
+  --color-primary-50: #eff5ff;
+  --color-primary-100: #d5e7ff;
+  --color-primary-200: #adcfff;
+  --color-primary-300: #78b0ff;
+  --color-primary-400: #408fff;
+  --color-primary-500: #1677ff;
+  --color-primary-600: #1365d9;
+  --color-primary-700: #0f53b3;
+  --color-primary-800: #0c418c;
+  --color-primary-900: #093066;
+  --color-primary-950: #061e40;
+
+  --color-success: #52c41a;
+  --color-warning: #faad14;
+  --color-error: #f5222d;
+  --color-info: #1677ff;
+
+  --color-layout: #f7fafc;
+  --color-background: #ffffff;
+  --color-container: #ffffff;
+  --color-card: #ffffff;
+  --color-muted: #f5f5f5;
+  --color-muted-foreground: #6b7280;
+  --color-base-text: #1f1f1f;
+  --color-border: #e8e8e8;
+
+  --shadow-header: 0 1px 2px rgba(0, 21, 41, 0.08);
+  --shadow-sider: 2px 0 8px 0 rgba(29, 35, 41, 0.05);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px rgba(0, 0, 0, 0.02);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+/* Tailwind preflight 已处理 CSS reset，此处仅补充 box-sizing */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  color: var(--color-base-text);
+  background-color: var(--color-layout);
+}
+
+/* shadcn 技术栈下复刻旧版紧凑 B 端视觉密度 */
+.dark body {
+  color: var(--color-base-text);
+  background-color: var(--color-layout);
+}
+
+.dark .bg-white,
+.dark [class~="bg-white/95"],
+.dark [class~="bg-white/90"],
+.dark [class~="bg-white/80"] {
+  background-color: var(--color-container) !important;
+}
+
+.dark .bg-gray-50,
+.dark [class~="bg-gray-50/90"],
+.dark [class~="bg-gray-50/80"],
+.dark [class~="bg-gray-50/60"],
+.dark .bg-neutral-50,
+.dark [class~="bg-neutral-50/60"],
+.dark .bg-neutral-100,
+.dark .bg-slate-50,
+.dark [class~="bg-slate-50/70"] {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+.dark .bg-gray-300 {
+  background-color: rgba(255, 255, 255, 0.22) !important;
+}
+
+.dark [class~="hover:bg-gray-200"]:hover,
+.dark [class~="hover:bg-slate-100"]:hover {
+  background-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+.dark .bg-primary-50,
+.dark [class~="bg-primary-50/50"],
+.dark .bg-primary-100,
+.dark [class~="bg-blue-50/40"],
+.dark [class~="bg-blue-50/70"] {
+  background-color: rgba(79, 156, 255, 0.18) !important;
+}
+
+.dark .bg-blue-50 {
+  background-color: rgba(79, 156, 255, 0.16) !important;
+}
+
+.dark [class~="hover:bg-primary-50/60"]:hover,
+.dark [class~="hover:bg-primary-50/30"]:hover,
+.dark .group:hover [class~="group-hover:bg-primary-50/60"] {
+  background-color: rgba(79, 156, 255, 0.14) !important;
+}
+
+.dark [data-selected="true"][class~="data-[selected=true]:bg-primary-100/70"],
+.dark .group[data-selected="true"] [class~="group-data-[selected=true]:bg-primary-100/70"] {
+  background-color: rgba(79, 156, 255, 0.22) !important;
+}
+
+.dark .bg-purple-50,
+.dark .bg-indigo-50 {
+  background-color: rgba(147, 51, 234, 0.14) !important;
+}
+
+.dark .bg-cyan-50,
+.dark .bg-sky-50 {
+  background-color: rgba(6, 182, 212, 0.12) !important;
+}
+
+.dark .bg-emerald-50,
+.dark .bg-green-50 {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+}
+
+.dark .bg-lime-50 {
+  background-color: rgba(132, 204, 22, 0.12) !important;
+}
+
+.dark .bg-rose-50,
+.dark .bg-red-50 {
+  background-color: rgba(244, 63, 94, 0.12) !important;
+}
+
+.dark .bg-orange-50,
+.dark .bg-amber-50,
+.dark [class~="bg-amber-50/80"] {
+  background-color: rgba(245, 158, 11, 0.12) !important;
+}
+
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-neutral-100,
+.dark .border-neutral-200,
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-slate-300,
+.dark .divide-gray-50 > :not(:last-child),
+.dark .divide-gray-100 > :not(:last-child),
+.dark .divide-slate-100 > :not(:last-child) {
+  border-color: var(--color-border) !important;
+}
+
+.dark .border-primary-100,
+.dark .border-primary-200 {
+  border-color: rgba(79, 156, 255, 0.34) !important;
+}
+
+.dark [class~="hover:border-primary-200"]:hover {
+  border-color: rgba(79, 156, 255, 0.48) !important;
+}
+
+.dark .border-blue-100 {
+  border-color: rgba(59, 130, 246, 0.32) !important;
+}
+
+.dark .border-amber-100 {
+  border-color: rgba(245, 158, 11, 0.32) !important;
+}
+
+.dark .text-gray-800,
+.dark .text-gray-700,
+.dark .text-gray-600,
+.dark .text-gray-300,
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-slate-700,
+.dark .text-slate-600,
+.dark .text-slate-300 {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+.dark .text-gray-500,
+.dark .text-gray-400,
+.dark .text-slate-500,
+.dark .text-slate-400 {
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+
+/* 证书报告模块表格在暗黑模式下统一高对比可读性 */
+.dark :is(.ui-data-table, .cert-report-data-table, .cert-print-export-table) {
+  /* 参考 GitHub/AG Grid 的高对比暗色策略：中性深底 + 高亮前景 + 清晰分隔线 */
+  --cert-table-header-bg: #1f2a37;
+  --cert-table-row-bg: #0f1722;
+  --cert-table-row-alt-bg: #131d2a;
+  --cert-table-row-hover-bg: #1b2a3c;
+  --cert-table-row-selected-bg: #264764;
+  --cert-table-border: #2f3b4c;
+  --cert-table-header-border: #46566b;
+  --cert-table-header-text: #f3f7fb;
+  --cert-table-body-text: #e7eef7;
+}
+
+.dark :is(.ui-data-table, .cert-report-data-table, .cert-print-export-table) table {
+  font-size: 13px;
+}
+
+.dark :is(.ui-data-table, .cert-report-data-table, .cert-print-export-table) th {
+  background-color: var(--cert-table-header-bg) !important;
+  border-bottom-color: var(--cert-table-header-border) !important;
+  color: var(--cert-table-header-text) !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.1px;
+}
+
+.dark :is(.ui-data-table, .cert-report-data-table, .cert-print-export-table) th.sticky {
+  background-color: var(--cert-table-header-bg) !important;
+}
+
+.dark :is(.ui-data-table, .cert-report-data-table, .cert-print-export-table) td {
+  border-bottom-color: var(--cert-table-border) !important;
+  color: var(--cert-table-body-text) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+
+.dark :is(.ui-data-table, .cert-report-data-table, .cert-print-export-table) tbody tr td {
+  background-color: var(--cert-table-row-bg) !important;
+}
+
+.dark :is(.ui-data-table, .cert-report-data-table, .cert-print-export-table) tbody tr:nth-child(even) td {
+  background-color: var(--cert-table-row-alt-bg) !important;
+}
+
+.dark :is(.ui-data-table, .cert-report-data-table, .cert-print-export-table) tbody tr td.sticky {
+  background-color: var(--cert-table-row-bg) !important;
+}
+
+.dark :is(.ui-data-table, .cert-report-data-table, .cert-print-export-table) tbody tr:nth-child(even) td.sticky {
+  background-color: var(--cert-table-row-alt-bg) !important;
+}
+
+.dark :is(.ui-data-table, .cert-report-data-table, .cert-print-export-table) [data-table-filter-trigger],
+.dark :is(.ui-data-table, .cert-report-data-table, .cert-print-export-table) button[aria-label^="排序"] {
+  color: #dbe6f3 !important;
+}
+
+.dark :is(.ui-data-table, .cert-report-data-table, .cert-print-export-table) tbody tr:hover td,
+.dark :is(.ui-data-table, .cert-report-data-table, .cert-print-export-table) tbody tr:hover td.sticky {
+  background-color: var(--cert-table-row-hover-bg) !important;
+}
+
+.dark :is(.ui-data-table, .cert-report-data-table, .cert-print-export-table) [data-selected="true"] td,
+.dark :is(.ui-data-table, .cert-report-data-table, .cert-print-export-table) [data-selected="true"] td.sticky {
+  background-color: var(--cert-table-row-selected-bg) !important;
+  color: #ffffff !important;
+}
+
+.dark :is(.ui-data-table, .cert-report-data-table, .cert-print-export-table) .group:hover [data-table-filter-trigger],
+.dark :is(.ui-data-table, .cert-report-data-table, .cert-print-export-table) .group:hover button[aria-label^="排序"] {
+  color: #ffffff !important;
+}
+
+/* 证书报告模块中使用 antd Table 的列表同样保持高对比 */
+.dark .cert-report-ant-table .ant-table {
+  background: #0f1722;
+  color: #e7eef7;
+}
+
+.dark .cert-report-ant-table .ant-table-thead > tr > th {
+  background: #1f2a37 !important;
+  color: #f3f7fb !important;
+  border-bottom-color: #46566b !important;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dark .cert-report-ant-table .ant-table-tbody > tr > td {
+  background: #0f1722;
+  color: #e7eef7 !important;
+  border-bottom-color: #2f3b4c !important;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dark .cert-report-ant-table .ant-table-tbody > tr:nth-child(even) > td {
+  background: #131d2a;
+}
+
+.dark .cert-report-ant-table .ant-table-tbody > tr:hover > td {
+  background: #1b2a3c !important;
+}
+
+.dark .cert-report-ant-table .ant-table-tbody > tr.ant-table-row-selected > td {
+  background: #264764 !important;
+  color: #ffffff !important;
+}
+
+.dark .text-blue-600,
+.dark .text-blue-800 {
+  color: #bfdbfe !important;
+}
+
+.dark .text-primary-100,
+.dark .text-primary-200,
+.dark .text-primary-300,
+.dark .text-primary-400 {
+  color: #dbeafe !important;
+}
+
+.dark .text-amber-900 {
+  color: #fcd34d !important;
+}
+
+.dark .ring-black\/5 {
+  --tw-ring-color: rgba(255, 255, 255, 0.10) !important;
+}
+
+.dark .ring-gray-200,
+.dark .ring-slate-200 {
+  --tw-ring-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* 富文本编辑器（wangEditor / Quill）暗黑模式统一适配 */
+.dark .lims-rich-text,
+.dark .w-e-bar,
+.dark .w-e-text-container {
+  --w-e-toolbar-bg-color: #101923;
+  --w-e-toolbar-color: rgba(255, 255, 255, 0.82);
+  --w-e-toolbar-border-color: rgba(255, 255, 255, 0.12);
+  --w-e-toolbar-active-bg-color: rgba(79, 156, 255, 0.18);
+  --w-e-toolbar-active-color: #dbeafe;
+  --w-e-textarea-bg-color: #101923;
+  --w-e-textarea-color: rgba(255, 255, 255, 0.92);
+  --w-e-textarea-border-color: rgba(255, 255, 255, 0.14);
+  --w-e-textarea-slight-bg-color: rgba(255, 255, 255, 0.08);
+  --w-e-textarea-selected-border-color: rgba(79, 156, 255, 0.5);
+}
+
+.dark .lims-rich-text .w-e-bar,
+.dark .lims-rich-text .w-e-toolbar {
+  background-color: #101923 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+.dark .lims-rich-text .w-e-bar-item button,
+.dark .lims-rich-text .w-e-bar-item > button,
+.dark .lims-rich-text .w-e-bar-item [role="button"],
+.dark .lims-rich-text .w-e-menu {
+  color: rgba(255, 255, 255, 0.82) !important;
+}
+
+.dark .lims-rich-text .w-e-bar-item:hover button,
+.dark .lims-rich-text .w-e-bar-item:hover > button,
+.dark .lims-rich-text .w-e-menu:hover {
+  background-color: rgba(79, 156, 255, 0.16) !important;
+  color: #dbeafe !important;
+}
+
+.dark .lims-rich-text .w-e-text-container {
+  background-color: #101923 !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+.dark .lims-rich-text .w-e-scroll,
+.dark .lims-rich-text [data-slate-editor] {
+  background-color: #101923 !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+.dark .lims-rich-text .w-e-text-placeholder {
+  color: rgba(255, 255, 255, 0.48) !important;
+}
+
+.dark .lims-rich-text .w-e-panel-container,
+.dark .lims-rich-text .w-e-drop-panel {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  background-color: #101923 !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.dark .ql-toolbar,
+.dark .ql-container {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  background-color: #101923 !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.dark input[type="checkbox"],
+.dark input[type="radio"] {
+  border-color: rgba(255, 255, 255, 0.28);
+  background-color: rgba(16, 25, 35, 0.95);
+}
+
+input,
+select,
+textarea,
+button {
+  font-family: inherit;
+}
+
+#root {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.18);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.28);
+}
+
+::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+/* AI 助手动画 */
+@keyframes bounce-subtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@keyframes ping-once {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+@utility animate-bounce-subtle {
+  animation: bounce-subtle 2s ease-in-out infinite;
+}
+@utility animate-ping-once {
+  animation: ping-once 0.5s ease-out;
+}
+@keyframes message-in-left {
+  0% { opacity: 0; transform: translateX(-12px) scale(0.96); }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes message-in-right {
+  0% { opacity: 0; transform: translateX(12px) scale(0.96); }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes panel-open {
+  0% { opacity: 0; transform: scale(0.95) translateY(8px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes typing-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+@utility animate-message-in-left {
+  animation: message-in-left 0.35s ease-out both;
+}
+@utility animate-message-in-right {
+  animation: message-in-right 0.35s ease-out both;
+}
+@utility animate-panel-open {
+  animation: panel-open 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@utility animate-typing-cursor {
+  animation: typing-cursor 0.8s ease-in-out infinite;
+}
+
+/* AI 消息气泡微交互 */
+.ai-msg-user {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.ai-msg-user:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(22, 119, 255, 0.3);
+}
+.ai-msg-assistant {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.ai-msg-assistant:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* 快捷问题按钮微交互 */
+.ai-quick-btn {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ai-quick-btn:hover {
+  transform: translateY(-2px);
+}
+
+
+/* ===== Prose 排版（替代 @tailwindcss/typography） ===== */
+/* 容器 */
+.prose {
+  color: var(--color-base-text);
+  max-width: none;
+  line-height: 1.75;
+  word-wrap: break-word;
+}
+.prose-sm { font-size: 0.875rem; line-height: 1.7142857; }
+.prose-invert { color: rgba(255, 255, 255, 0.92); }
+
+/* 标题 */
+.prose h1 { font-size: 1.5rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.75rem; line-height: 1.375; }
+.prose h2 { font-size: 1.25rem; font-weight: 600; margin-top: 1.25rem; margin-bottom: 0.625rem; line-height: 1.4; }
+.prose h3 { font-size: 1.125rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; line-height: 1.5; }
+.prose h4 { font-size: 1rem; font-weight: 600; margin-top: 0.75rem; margin-bottom: 0.375rem; line-height: 1.5; }
+.prose-sm h1 { font-size: 1.375rem; }
+.prose-sm h2 { font-size: 1.125rem; }
+.prose-sm h3 { font-size: 1rem; }
+.prose-sm h4 { font-size: 0.875rem; }
+
+/* 段落 */
+.prose p { margin-top: 0.625rem; margin-bottom: 0.625rem; }
+.prose-sm p { margin-top: 0.5rem; margin-bottom: 0.5rem; }
+
+/* 加粗 / 倾斜 / 删除线 */
+.prose strong { font-weight: 600; color: inherit; }
+.prose em { font-style: italic; }
+.prose del { text-decoration: line-through; }
+
+/* 行内代码 */
+.prose code { font-size: 0.85em; background-color: #f1f5f9; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-weight: 400; }
+.prose code::before, .prose code::after { content: none; }
+.prose-invert code { background-color: rgba(255, 255, 255, 0.1); }
+
+/* 代码块 */
+.prose pre { background-color: #0f172a; color: #e2e8f0; padding: 0.75rem 1rem; border-radius: 0.5rem; overflow-x: auto; margin-top: 0.75rem; margin-bottom: 0.75rem; font-size: 0.8125rem; line-height: 1.7142857; }
+.prose pre code { background-color: transparent; color: inherit; padding: 0; font-size: inherit; border-radius: 0; }
+
+/* 块引用 */
+.prose blockquote { border-left: 3px solid #1677ff; background-color: rgba(22, 119, 255, 0.04); padding: 0.125rem 1rem; border-radius: 0 0.5rem 0.5rem 0; margin-top: 0.75rem; margin-bottom: 0.75rem; color: inherit; }
+.prose-invert blockquote { border-left-color: #4096ff; background-color: rgba(22, 119, 255, 0.08); }
+
+/* 列表 */
+.prose ul { list-style-type: disc; padding-left: 1.625rem; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+.prose ol { list-style-type: decimal; padding-left: 1.625rem; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+.prose li { margin-top: 0.125rem; margin-bottom: 0.125rem; }
+.prose li > ul, .prose li > ol { margin-top: 0.125rem; margin-bottom: 0.125rem; }
+.prose ul > li::marker { color: #94a3b8; }
+.prose ol > li::marker { color: #94a3b8; }
+
+/* 任务列表 (GFM) */
+.prose ul:has(li > input[type="checkbox"]) {
+  list-style-type: none;
+  padding-left: 0;
+}
+.prose ul:has(li > input[type="checkbox"]) li {
+  padding-left: 0.25rem;
+}
+.prose input[type="checkbox"] {
+  margin-right: 0.375rem;
+  height: 0.875rem;
+  width: 0.875rem;
+  border-radius: 0.1875rem;
+  border: 1px solid #cbd5e1;
+  accent-color: #1677ff;
+}
+
+/* 分割线 */
+.prose hr { border: 0; border-top: 1px solid #e2e8f0; margin-top: 1.5rem; margin-bottom: 1.5rem; }
+.prose-invert hr { border-color: rgba(255, 255, 255, 0.12); }
+
+/* 表格 */
+.prose table { width: 100%; border-collapse: collapse; font-size: 0.875rem; line-height: 1.5; margin-top: 0.75rem; margin-bottom: 0.75rem; }
+.prose thead { border-bottom: 2px solid #e2e8f0; }
+.prose thead th { padding: 0.5rem 0.75rem; text-align: left; font-weight: 600; background-color: #f8fafc; border: 1px solid #e2e8f0; vertical-align: bottom; }
+.prose tbody td { padding: 0.5rem 0.75rem; border: 1px solid #e2e8f0; vertical-align: top; }
+.prose tbody tr:nth-child(even) { background-color: #f8fafc; }
+.prose-invert thead { border-bottom-color: rgba(255, 255, 255, 0.16); }
+.prose-invert thead th { background-color: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.12); }
+.prose-invert tbody td { border-color: rgba(255, 255, 255, 0.12); }
+.prose-invert tbody tr:nth-child(even) { background-color: rgba(255, 255, 255, 0.03); }
+
+/* 链接 */
+.prose a { color: #1677ff; text-decoration: none; font-weight: 500; }
+.prose a:hover { text-decoration: underline; }
+
+/* 图片 */
+.prose img { max-width: 100%; height: auto; border-radius: 0.5rem; margin-top: 0.75rem; margin-bottom: 0.75rem; }
+
+/* dark:prose-invert */
+.dark .prose-invert { color: rgba(255, 255, 255, 0.92) !important; }
+
+/* 过渡动画 */
+.prose * { transition: none; }

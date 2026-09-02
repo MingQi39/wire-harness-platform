@@ -1,0 +1,11 @@
+.fill {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 0%;
+  flex-direction: column;
+}
+
+.overflowPanes {
+  min-height: 0;
+  overflow: hidden;
+}

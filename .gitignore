@@ -1,0 +1,22 @@
+# dependencies
+web/node_modules/
+web/dist/
+.pnpm-store/
+
+# env & secrets
+server/.env
+web/.env
+web/.env.*
+web/.env.local
+
+# go
+server/bin/
+*.exe
+
+# IDE
+.idea/
+.vscode/
+.DS_Store
+
+# logs
+*.log

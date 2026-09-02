@@ -1,0 +1,109 @@
+.page {
+  min-height: 100vh;
+}
+
+.inputItem {
+  > :global(.relative) {
+    width: 100%;
+  }
+
+  > :global(.relative) > span:global([data-input-prefix]) {
+    left: 12px;
+    z-index: 1;
+    color: #94a3b8;
+    transition:
+      color 160ms ease,
+      transform 160ms ease;
+  }
+
+  > :global(.relative) > span:global([data-input-prefix]) svg {
+    width: 16px;
+    height: 16px;
+    color: inherit !important;
+  }
+
+  > :global(.relative:focus-within) > span:global([data-input-prefix]) {
+    color: #2383e8;
+    transform: scale(1.03);
+  }
+}
+
+.rememberItem {
+  > p {
+    min-height: 0 !important;
+    height: 0;
+  }
+}
+
+.loginInput {
+  height: 38px !important;
+  border: 1px solid rgba(148, 163, 184, 0.34) !important;
+  border-radius: 11px !important;
+  background: rgba(255, 255, 255, 0.78) !important;
+  padding: 0 40px 0 36px !important;
+  color: #1f2937 !important;
+  font-size: 14px !important;
+  line-height: 38px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.76),
+    0 1px 2px rgba(15, 23, 42, 0.04) !important;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+
+  &::placeholder {
+    color: #a8b1c2;
+  }
+
+  &:hover {
+    border-color: rgba(35, 131, 232, 0.48) !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+  }
+
+  &:focus {
+    border-color: #2383e8 !important;
+    background: #ffffff !important;
+    box-shadow:
+      0 0 0 4px rgba(35, 131, 232, 0.12),
+      0 10px 24px rgba(35, 131, 232, 0.12) !important;
+  }
+}
+
+:global(.dark) {
+  .inputItem {
+    > :global(.relative) > span:global([data-input-prefix]) {
+      color: #7b8798;
+    }
+
+    > :global(.relative:focus-within) > span:global([data-input-prefix]) {
+      color: #60a5fa;
+    }
+  }
+
+  .loginInput {
+    border-color: rgba(148, 163, 184, 0.2) !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: #f8fafc !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 1px 2px rgba(0, 0, 0, 0.18) !important;
+
+    &::placeholder {
+      color: #7b8798;
+    }
+
+    &:hover {
+      border-color: rgba(96, 165, 250, 0.46) !important;
+      background: rgba(255, 255, 255, 0.09) !important;
+    }
+
+    &:focus {
+      border-color: #60a5fa !important;
+      background: rgba(15, 23, 42, 0.72) !important;
+      box-shadow:
+        0 0 0 4px rgba(96, 165, 250, 0.14),
+        0 10px 24px rgba(0, 0, 0, 0.18) !important;
+    }
+  }
+}
