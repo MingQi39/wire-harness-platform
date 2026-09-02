@@ -37,12 +37,6 @@ else
 fi
 docker compose "${compose_args[@]}" ps
 
-web_port="$(grep -E '^WEB_HOST_PORT=' "$ENV_FILE" | tail -n1 | cut -d= -f2- || true)"
-web_port="${web_port:-127.0.0.1:8096:80}"
-local_health_url="http://127.0.0.1:8096"
-public_site="${PUBLIC_SITE_URL:-https://wire.houmq.cn}"
-public_site="${public_site%/}"
-
 wait_ready() {
   local url="$1"
   for i in 1 2 3 4 5 6 7 8 9 10; do
@@ -54,11 +48,28 @@ wait_ready() {
   return 1
 }
 
-if ! wait_ready "$local_health_url"; then
-  echo "local health check failed on ${local_health_url}" >&2
+wait_ready_in_container() {
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    if docker compose "${compose_args[@]}" exec -T web curl -fsS http://127.0.0.1/healthz >/dev/null \
+      && docker compose "${compose_args[@]}" exec -T web curl -fsS http://127.0.0.1/ready >/dev/null; then
+      return 0
+    fi
+    sleep 2
+  done
+  return 1
+}
+
+if ! wait_ready_in_container; then
+  echo "container health check failed on wire-harness-web" >&2
   exit 1
 fi
-echo "Local health OK: ${local_health_url}"
+echo "Container health OK"
+
+web_port="${WEB_HOST_PORT:-8096}"
+web_bind="${WEB_HOST_BIND:-127.0.0.1}"
+local_health_url="http://${web_bind}:${web_port}"
+public_site="${PUBLIC_SITE_URL:-https://wire.houmq.cn}"
+public_site="${public_site%/}"
 
 if [[ "$EDGE_MODE" == "shared-caddy" ]]; then
   bash "$DEPLOY_DIR/scripts/register-wire-shared-caddy.sh"
